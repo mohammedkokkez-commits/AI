@@ -1,6 +1,5 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -8,60 +7,61 @@ const PORT = process.env.PORT || 3000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+// الواجهة الرئيسية
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>شات الذكاء الاصطناعي</title>
+        </head>
+
+        <body style="font-family: Arial, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f9f9f9;">
+            <h2>محادثة الذكاء الاصطناعي (مجاني)</h2>
+            <form action="/chat" method="POST" style="background: #fff; padding: 15px; border: 1px solid #ccc; max-width: 500px;">
+                <label><strong>اكتب سؤالك هنا:</strong></label><br><br>
+                <textarea name="message" style="width: 95%; height: 100px; padding: 8px;" required></textarea><br><br>
+                <input type="submit" value="إرسال الطلب" style="padding: 10px 20px; font-size: 16px; background: #0066cc; color: white; border: none; cursor: pointer;">
+            </form>
+        </body>
+        </html>
+    `);
 });
 
+// معالجة الرسالة
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
     if (!userMessage) return res.redirect('/');
 
     try {
-        // استخدام نموذج مفتوح ومجاني بشكل مباشر من Hugging Face
-        const response = await fetch("https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                inputs: `<|system|>\nYou are a helpful assistant. Reply in Arabic.<|end|>\n<|user|>\n${userMessage}<|end|>\n<|assistant|>`,
-                parameters: { max_new_tokens: 250 }
-            })
-        });
-
-        const data = await response.json();
-        let botReply = "عذراً، لم أتمكن من الحصول على رد.";
-
-        if (Array.isArray(data) && data[0]?.generated_text) {
-            const rawText = data[0].generated_text;
-            botReply = rawText.split('<|assistant|>')[1] || rawText;
-        }
+        // إرسال الطلب لـ Pollinations AI (خدمة مجانية بالكامل وبدون مفتاح)
+        const promptText = encodeURIComponent(`أجب باللغة العربية باختصار: ${userMessage}`);
+        const response = await fetch(`https://text.pollinations.ai/${promptText}`);
+        
+        const botReply = await response.text();
 
         res.send(`
+            <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="utf-8">
-                <title>محادثة الآيباد</title>
-                <style>
-                    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; color: #333; direction: rtl; }
-                    .box { background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
-                    .user { color: #0066cc; }
-                    .bot { color: #008000; white-space: pre-wrap; }
-                    a { display: inline-block; margin-top: 15px; padding: 10px 15px; background: #0066cc; color: #fff; text-decoration: none; border-radius: 5px; }
-                </style>
+                <title>النتيجة</title>
             </head>
-            <body>
-                <h2>المحادثة المجانية (iPad 1)</h2>
-                <div class="box">
-                    <p class="user"><strong>السؤال:</strong> ${escapeHtml(userMessage)}</p>
+            <body style="font-family: Arial, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f4f4f4;">
+                <div style="background: #fff; padding: 15px; border: 1px solid #ccc; max-width: 600px;">
+                    <p style="color: #0066cc;"><strong>سؤالك:</strong> ${escapeHtml(userMessage)}</p>
                     <hr>
-                    <p class="bot"><strong>الجواب:</strong><br>${escapeHtml(botReply.trim())}</p>
+                    <p style="color: #008000; white-space: pre-wrap;"><strong>الجواب:</strong><br>${escapeHtml(botReply)}</p>
                 </div>
-                <a href="/">← سؤال جديد</a>
+                <br>
+                <a href="/" style="padding: 10px 15px; background: #333; color: white; text-decoration: none;">← سؤال جديد</a>
             </body>
             </html>
         `);
 
     } catch (error) {
-        res.send("حدث خطأ أثناء الاتصال: " + error.message);
+        res.send("حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: " + error.message);
     }
 });
 
